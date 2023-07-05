@@ -1,7 +1,7 @@
 const itemForm = document.querySelector("#item-form");
 const itemInput = document.querySelector("#item-input");
 const itemList = document.querySelector("#item-list");
-const filterItems = document.querySelector("#filter");
+const itemFilter = document.querySelector("#filter");
 const clearBtn = document.querySelector("#clear");
 
 function addItem(e) {
@@ -56,14 +56,26 @@ function clearItems() {
   checkUI();
 }
 
+function applyFilter(e) {
+  const filterText = e.target.value.toLowerCase();
+  const itemListChildren = itemList.querySelectorAll("li");
+  itemListChildren.forEach((item, index) => {
+    if (!item.innerText.toLowerCase().includes(filterText)) {
+      item.style.display = "none";
+    } else {
+      item.style.display = "flex";
+    }
+  });
+}
+
 function checkUI() {
   const numberOfItems = itemList.childElementCount;
   // const numberOfItems = document.querySelectorAll("li").length;
   if (numberOfItems === 0) {
-    filterItems.style.display = "none";
+    itemFilter.style.display = "none";
     clearBtn.style.display = "none";
   } else {
-    filterItems.style.display = "block";
+    itemFilter.style.display = "block";
     clearBtn.style.display = "block";
   }
 }
@@ -72,5 +84,6 @@ function checkUI() {
 itemForm.addEventListener("submit", addItem);
 clearBtn.addEventListener("click", clearItems);
 itemList.addEventListener("click", removeItem);
+itemFilter.addEventListener("input", applyFilter);
 
 checkUI();
