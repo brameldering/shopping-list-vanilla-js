@@ -1,30 +1,83 @@
 const itemForm = document.querySelector("#item-form");
 const itemInput = document.querySelector("#item-input");
+const addItemButton = itemForm.querySelector(".btn");
 const itemList = document.querySelector("#item-list");
 const itemFilter = document.querySelector("#filter");
 const clearBtn = document.querySelector("#clear");
 
-function addItem(e) {
-  e.preventDefault();
-  console.log("submit");
+let inEditMode = false;
+let selectedItemForEdit = "";
 
+// Returns array with list of items in localStorage
+function getItemsFromStorage() {
+  const itemsInStorage = localStorage.getItem("items");
+  if (itemsInStorage) {
+    return JSON.parse(itemsInStorage);
+  } else {
+    return [];
+  }
+}
+
+function displayItems() {
+  clearItemsFromDOM();
+  const items = getItemsFromStorage();
+  items.forEach((item) => addItemToDOM(item));
+  resetUI();
+}
+
+// ======== Add Item ========
+
+function onAddItem(e) {
+  e.preventDefault();
   const newItem = itemInput.value;
-  // console.log(newItem);
 
   if (newItem === "") {
     alert("Please enter an item");
     return;
   }
 
+  if (inEditMode) {
+    const itemToEdit = itemList.querySelector(".edit");
+    removeItemFromStorage(itemToEdit.textContent);
+    removeItemFromDOM(itemToEdit);
+    inEditMode = false;
+  }
+
+  if (itemAlreadyExists(newItem)) {
+    alert("Item already exists");
+    return;
+  }
+  addItemToDOM(newItem);
+  addItemToStorage(newItem);
+
+  resetUI();
+}
+
+function itemAlreadyExists(item) {
+  const allDOMItems = document.querySelector("#item-list").children;
+  const matchingItem = Array.from(allDOMItems).filter((i) => i.textContent === item);
+  return matchingItem.length > 0;
+}
+
+function addItemToDOM(itemName) {
   const li = document.createElement("li");
-  li.appendChild(document.createTextNode(newItem));
+  li.className = "shopping-list-item";
+  li.appendChild(document.createTextNode(itemName));
 
   const button = createButton("remove-item btn-link text-red");
   li.appendChild(button);
 
   itemList.appendChild(li);
-  itemInput.value = "";
-  checkUI();
+}
+
+function addItemToStorage(itemName) {
+  const items = getItemsFromStorage();
+  const lowerCaseItems = items.map((item) => item.toLowerCase());
+
+  if (lowerCaseItems.includes(itemName.toLowerCase())) return;
+  items.push(itemName);
+  localStorage.removeItem("items");
+  localStorage.setItem("items", JSON.stringify(items));
 }
 
 function createButton(classes) {
@@ -41,20 +94,60 @@ function createIcon(classes) {
   return icon;
 }
 
-function removeItem(e) {
-  // if (e.target.parentElement.classList.contains("remove-item")) {
+// ======== Remove Item ========
+
+function onClickItem(e) {
   if (e.target.className === "fa-solid fa-xmark") {
-    e.target.parentElement.parentElement.remove();
-    checkUI();
+    const item = e.target.parentElement.parentElement;
+    removeItemFromDOM(item);
+    // console.log(item.textContent);
+    removeItemFromStorage(item.textContent);
+    resetUI();
+  } else {
+    if (e.target.className === "shopping-list-item") {
+      inEditMode = true;
+      // Remove all existing edit modes if any
+      itemList.querySelectorAll("li").forEach((i) => i.classList.remove("edit"));
+      // Set selected item to edit mode
+      e.target.classList.add("edit");
+      itemInput.classList.add("edit");
+      addItemButton.classList.add("edit");
+      addItemButton.innerHTML = `<i class = "fa-solid fa-edit"></i> Replace Item`;
+      selectedItemForEdit = e.target.textContent;
+      itemInput.value = selectedItemForEdit;
+    }
   }
 }
 
-function clearItems() {
+function removeItemFromDOM(itemName) {
+  itemName.remove();
+}
+
+function removeItemFromStorage(itemName) {
+  let items = getItemsFromStorage();
+  items = items.filter((item) => item != itemName);
+  localStorage.setItem("items", JSON.stringify(items));
+}
+
+// ======== Clear Items ========
+
+function onClearItems() {
+  clearItemsFromDOM();
+  clearItemsFromStorage();
+  resetUI();
+}
+
+function clearItemsFromDOM() {
   while (itemList.firstChild) {
     itemList.removeChild(itemList.firstChild);
   }
-  checkUI();
 }
+
+function clearItemsFromStorage() {
+  localStorage.removeItem("items");
+}
+
+// ======== Other functions ========
 
 function applyFilter(e) {
   const filterText = e.target.value.toLowerCase();
@@ -68,9 +161,9 @@ function applyFilter(e) {
   });
 }
 
-function checkUI() {
-  const numberOfItems = itemList.childElementCount;
-  // const numberOfItems = document.querySelectorAll("li").length;
+function resetUI() {
+  itemInput.value = "";
+  const numberOfItems = document.querySelectorAll("li").length;
   if (numberOfItems === 0) {
     itemFilter.style.display = "none";
     clearBtn.style.display = "none";
@@ -78,12 +171,22 @@ function checkUI() {
     itemFilter.style.display = "block";
     clearBtn.style.display = "block";
   }
+  // remove all edit modes
+  itemInput.classList.remove("edit");
+  addItemButton.classList.remove("edit");
+  inEditMode = false;
+  addItemButton.innerHTML = '<i class="fa-solid fa-plus"></i> Add Item';
 }
 
-// Event Listeners
-itemForm.addEventListener("submit", addItem);
-clearBtn.addEventListener("click", clearItems);
-itemList.addEventListener("click", removeItem);
-itemFilter.addEventListener("input", applyFilter);
+function init() {
+  // Event Listeners
+  itemForm.addEventListener("submit", onAddItem);
+  clearBtn.addEventListener("click", onClearItems);
+  itemList.addEventListener("click", onClickItem);
+  itemFilter.addEventListener("input", applyFilter);
+  document.addEventListener("DOMContentLoaded", displayItems);
 
-checkUI();
+  resetUI();
+}
+
+init();
